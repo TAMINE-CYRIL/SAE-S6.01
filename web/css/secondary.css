@@ -1,0 +1,106 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #fafafa;
+  color: #1a1a1a;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 32px;
+  opacity: 0;
+  animation: fadeIn 0.6s ease forwards;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ai-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #555;
+}
+
+/* ── Bubble area ── */
+.bubble-area {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 48px;
+  overflow-y: auto;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 0.2s forwards;
+}
+
+.bubble {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px 48px;
+  max-width: 720px;
+  width: 100%;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid #eee;
+}
+
+.bubble-text {
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  line-height: 1.6;
+  font-weight: 400;
+  color: #222;
+  white-space: pre-line;
+}
+
+.bubble-text.placeholder {
+  color: #bbb;
+  font-style: italic;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
+.typing-cursor::after {
+  content: '▋';
+  animation: blink 0.7s step-end infinite;
+  margin-left: 2px;
+  color: #aaa;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

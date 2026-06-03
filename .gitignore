@@ -1,0 +1,29 @@
+# ─── Secrets / config locale ─────────────────────────────────────────────────
+.env
+*.local
+
+# ─── Supabase auto-hébergé (dépôt tiers volumineux, à cloner séparément) ──────
+supabase-local/
+
+# ─── Données générées ────────────────────────────────────────────────────────
+backend/ocr_cache/
+
+# ─── Corpus PDF (volumineux, transféré hors Git ; on garde juste le placeholder) ─
+backend/pdfs/*
+!backend/pdfs/README.md
+
+# ─── Outils / IDE ────────────────────────────────────────────────────────────
+.idea/
+.claude/
+.vscode/
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+
+# ─── Node ────────────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+Thumbs.db
+.DS_Store

@@ -1,0 +1,1059 @@
+{
+    "name":  "Frugal AI - Workflow B - Webhook IA Frugaliste",
+    "nodes":  [
+                  {
+                      "id":  "b000-0001",
+                      "name":  "Webhook: Frugal AI Frugaliste",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       0,
+                                       300
+                                   ],
+                      "webhookId":  "frugalai-frugaliste",
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "frugalai-frugaliste",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0002",
+                      "name":  "Config: Constantes",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "// ─── Modifier ici si votre Supabase a une autre clé ─────────────────────────\nconst CONFIG = {\n  SUPABASE_URL: \u0027http://host.docker.internal:8000/rest/v1\u0027,\n  SUPABASE_KEY: \u0027eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE\u0027,\n  OLLAMA_URL: \u0027http://host.docker.internal:11434\u0027,\n  FRUGALISTE_MODEL: \u0027mistral\u0027,\n  EMBEDDING_MODEL: \u0027nomic-embed-text\u0027\n};\nconst body = $input.all()[0].json.body || $input.all()[0].json;\nreturn [{ json: { ...CONFIG, _input: body } }];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0003",
+                      "name":  "Code: Valider \u0026 Init",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const cfg = $input.all()[0].json;\nconst body = cfg._input || {};\nconst sessionId = body.session_id || null;\nconst role = body.role || \u0027prêtre\u0027;\nconst message = (body.message || \u0027\u0027).trim();\nconst tour = Number(body.tour) || 0;\nconst isInit = tour === 0;\nconst modeleStandard = body.modele_standard || \u0027mistral\u0027;\nreturn [{\n  json: {\n    SUPABASE_URL: cfg.SUPABASE_URL,\n    SUPABASE_KEY: cfg.SUPABASE_KEY,\n    OLLAMA_URL: cfg.OLLAMA_URL,\n    FRUGALISTE_MODEL: cfg.FRUGALISTE_MODEL,\n    EMBEDDING_MODEL: cfg.EMBEDDING_MODEL,\n    session_id: sessionId,\n    role: role,\n    message: message,\n    tour: tour,\n    isInit: isInit,\n    modele_standard: modeleStandard\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0004",
+                      "name":  "IF: Est Initialisation",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       600,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "cond-init",
+                                                                                   "leftValue":  "={{ $json.isInit }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0005",
+                      "name":  "HTTP: Créer Session Supabase",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       800,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json.SUPABASE_URL + \u0027/sessions\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Prefer",
+                                                                                         "value":  "return=representation"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ role: $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json.role, modele_standard: $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json.modele_standard, statut: \u0027en_cours\u0027 }) }}",
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0006",
+                      "name":  "Code: Extraire Session Créée",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1000,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const resp = $input.all()[0].json;\nconst sessionData = Array.isArray(resp) ? resp[0] : resp;\nconst init = $(\u0027Code: Valider \u0026 Init\u0027).all()[0].json;\nreturn [{\n  json: {\n    SUPABASE_URL: init.SUPABASE_URL,\n    SUPABASE_KEY: init.SUPABASE_KEY,\n    OLLAMA_URL: init.OLLAMA_URL,\n    FRUGALISTE_MODEL: init.FRUGALISTE_MODEL,\n    EMBEDDING_MODEL: init.EMBEDDING_MODEL,\n    session_id: sessionData.id,\n    role: init.role,\n    message: init.message,\n    tour: init.tour,\n    isInit: true,\n    modele_standard: init.modele_standard\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0007",
+                      "name":  "Merge: Après Init",
+                      "type":  "n8n-nodes-base.merge",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       1200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "append"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0008",
+                      "name":  "HTTP: Récupérer Historique",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "={{ $json.SUPABASE_URL + \u0027/messages?session_id=eq.\u0027 + $json.session_id + \u0027\u0026order=tour.asc\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0009",
+                      "name":  "HTTP: Récupérer Scores",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       1600,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "={{ $(\u0027Merge: Après Init\u0027).all()[0].json.SUPABASE_URL + \u0027/scores?session_id=eq.\u0027 + $(\u0027Merge: Après Init\u0027).all()[0].json.session_id + \u0027\u0026order=question_id.asc\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Merge: Après Init\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Merge: Après Init\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0010",
+                      "name":  "Code: Préparer Embedding",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1800,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const state = $(\u0027Merge: Après Init\u0027).all()[0].json;\nconst queryText = state.message || \u0027frugalité sobriété décroissance introduction\u0027;\nreturn [{ json: { ...state, embed_query: queryText } }];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0011",
+                      "name":  "HTTP: Embedding Requête",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2000,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $json.OLLAMA_URL + \u0027/api/embeddings\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ model: $json.EMBEDDING_MODEL, prompt: $json.embed_query }) }}",
+                                         "options":  {
+                                                         "timeout":  60000
+                                                     }
+                                     },
+                      "continueOnFail":  true
+                  },
+                  {
+                      "id":  "b000-0012",
+                      "name":  "HTTP: Recherche RAG",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $(\u0027Code: Préparer Embedding\u0027).all()[0].json.SUPABASE_URL + \u0027/rpc/match_chunks\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Code: Préparer Embedding\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Code: Préparer Embedding\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ query_embedding: $json.embedding, match_count: 5 }) }}",
+                                         "options":  {
+                                                         "timeout":  30000
+                                                     }
+                                     },
+                      "continueOnFail":  true
+                  },
+                  {
+                      "id":  "b000-0013",
+                      "name":  "Code: Construire Prompt",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       2400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const QUESTIONS = [{id:1,texte:`IA et gestion des ressources`,reponses:[{t:`Automatiser des processus à grande échelle`,p:4},{t:`Contribuer à de nouvelles formes de régulation`,p:3},{t:`Effets inattendus sur l\u0027organisation sociale`,p:2},{t:`Encourager d\u0027autres priorités de gestion`,p:1}]},{id:2,texte:`Agriculture de précision / drones`,reponses:[{t:`Oui, optimiser via technologie`,p:4},{t:`Oui, si accompagné d\u0027agroécologie`,p:3},{t:`Non, agriculture industrielle est le problème`,p:2},{t:`Non, circuits courts et local`,p:1}]},{id:3,texte:`Villes intelligentes / IoT`,reponses:[{t:`Oui, optimiser trafic/éclairage via tech`,p:4},{t:`Oui, mais espaces verts et mobilité douce`,p:3},{t:`Non, décroissance planifiée nécessaire`,p:2},{t:`Non, architecture durable d\u0027abord`,p:1}]},{id:4,texte:`Fusion nucléaire`,reponses:[{t:`Oui, source illimitée et propre`,p:4},{t:`Oui, mais sobriété immédiate en attendant`,p:3},{t:`Non, délais trop longs, détourne des solutions`,p:2},{t:`Non, remettre en cause la croissance infinie`,p:1}]},{id:5,texte:`Fast fashion / économie circulaire`,reponses:[{t:`Oui, l\u0027économie circulaire perpétue ce modèle à faible impact`,p:4},{t:`Oui, mais il faut aussi acheter moins`,p:3},{t:`Non, il faut produire et acheter beaucoup moins`,p:2},{t:`Non, ce modèle doit être démantelé, pas \"verdi\"`,p:1}]},{id:6,texte:`Carburants verts / avion`,reponses:[{t:`Oui, maintenir la mobilité aérienne sans culpabilité`,p:4},{t:`Oui, mais technologies chères et rares`,p:3},{t:`Non, taxe kérosène et réduction des vols`,p:2},{t:`Non, voyager moins et moins loin`,p:1}]},{id:7,texte:`Sobriété vs efficacité`,reponses:[{t:`Non, l\u0027efficacité réduit l\u0027impact sans toucher au confort`,p:4},{t:`Les deux sont complémentaires`,p:3},{t:`Oui, sans sobriété les gains d\u0027efficacité sont annulés`,p:2},{t:`Oui, l\u0027efficacité est un leurre`,p:1}]},{id:8,texte:`Choix individuels vs collectif`,reponses:[{t:`Oui, le marché répondra aux consommateurs éclairés`,p:4},{t:`Oui, mais amplifiée par des politiques publiques fortes`,p:3},{t:`Non, la responsabilité est collective et politique`,p:2},{t:`Non, c\u0027est un piège qui occulte le pouvoir des entreprises`,p:1}]},{id:9,texte:`Taxe billets d\u0027avion`,reponses:[{t:`Non, développer d\u0027abord avions à hydrogène/électriques`,p:4},{t:`Non, cela limiterait la liberté de mouvement`,p:3},{t:`Oui, mais si les recettes financent des alternatives`,p:2},{t:`Oui, moyen efficace de réduire les émissions`,p:1}]},{id:10,texte:`Interdiction voitures thermiques 2030`,reponses:[{t:`Non, développer d\u0027abord carburants synthétiques/hydrogène`,p:4},{t:`Non, cela pénaliserait les ménages modestes`,p:3},{t:`Oui, mais si alternatives accessibles proposées`,p:2},{t:`Oui, mesure forte pour réduire la pollution`,p:1}]},{id:11,texte:`Subventions recherche technologies vertes`,reponses:[{t:`Oui, seul moyen d\u0027accélérer la transition`,p:4},{t:`Oui, mais en ciblant les technologies prometteuses`,p:3},{t:`Non, réduire d\u0027abord la consommation`,p:2},{t:`Non, le marché doit décider`,p:1}]},{id:12,texte:`Interdiction pub produits polluants`,reponses:[{t:`Non, éduquer plutôt qu\u0027interdire`,p:4},{t:`Non, atteinte à la liberté d\u0027expression`,p:3},{t:`Oui, mais seulement pour les produits les plus émetteurs`,p:2},{t:`Oui, la publicité encourage la surconsommation`,p:1}]},{id:13,texte:`Mobilité partagée`,reponses:[{t:`Oui, optimise l\u0027utilisation des véhicules`,p:4},{t:`Oui, mais avec réduction de la demande`,p:3},{t:`Non, peut encourager plus d\u0027usage`,p:2},{t:`Non, réduire la dépendance automobile d\u0027abord`,p:1}]},{id:14,texte:`Capture carbone DAC`,reponses:[{t:`Oui, capture le CO2 directement de l\u0027atmosphère`,p:4},{t:`Oui, mais développée durablement`,p:3},{t:`Non, coûteuse et énergivore`,p:2},{t:`Non, réduire les émissions à la source d\u0027abord`,p:1}]},{id:15,texte:`Course techno détourne l\u0027attention`,reponses:[{t:`Non, innovations essentielles sans changer nos comportements`,p:4},{t:`Non, maintenir la croissance tout en réduisant les émissions`,p:3},{t:`Oui, mais certaines technologies utiles en complément`,p:2},{t:`Oui, illusion que la tech résout tout`,p:1}]},{id:16,texte:`Nanotechnologies et climat`,reponses:[{t:`Oui, solutions innovantes pour capturer le carbone`,p:4},{t:`Oui, mais développées de manière responsable`,p:3},{t:`Non, risques pour l\u0027environnement et la santé`,p:2},{t:`Non, réduire la consommation énergétique d\u0027abord`,p:1}]},{id:17,texte:`Transports doux (vélo, marche)`,reponses:[{t:`Non, la rapidité est essentielle`,p:4},{t:`Non, améliorer plutôt les transports motorisés via la tech`,p:3},{t:`Oui, mais intégré dans une politique multimodale`,p:2},{t:`Oui, écologiques et favorisent la santé`,p:1}]},{id:18,texte:`Renoncer aux conforts modernes`,reponses:[{t:`Non, le progrès ne doit pas être remis en question`,p:4},{t:`Non, rendre ces conforts plus écologiques via la tech`,p:3},{t:`Oui, mais progressivement et équitablement`,p:2},{t:`Oui, le confort matériel a un coût environnemental élevé`,p:1}]},{id:19,texte:`Plateformes numériques et conso responsable`,reponses:[{t:`Oui, mieux informer et orienter les consommateurs`,p:4},{t:`Oui, mais transparentes et régulées`,p:3},{t:`Non, incitent à la surconsommation`,p:2},{t:`Non, réduire leur usage, privilégier les circuits courts`,p:1}]},{id:20,texte:`Investissements startups climatiques`,reponses:[{t:`Oui, agiles et innovantes, transforment les secteurs`,p:4},{t:`Oui, mais encadrées contre les dérives commerciales`,p:3},{t:`Non, motivées par le profit plus que l\u0027écologie`,p:2},{t:`Non, transition portée par le public et le collectif`,p:1}]},{id:21,texte:`Géo-ingénierie`,reponses:[{t:`Oui, nécessaire pour compenser les émissions résiduelles`,p:4},{t:`Oui, mais uniquement comme solution d\u0027appoint`,p:3},{t:`Non, trop risqué et incertain`,p:2},{t:`Non, fuite en avant qui détourne de la réduction réelle`,p:1}]},{id:22,texte:`IA et transition écologique`,reponses:[{t:`Oui, optimise production, transports, consommation`,p:4},{t:`Oui, mais si l\u0027IA est elle-même sobre en énergie`,p:3},{t:`Non, augmente la consommation d\u0027énergie et de ressources`,p:2},{t:`Non, priorités sociales et comportementales avant tout`,p:1}]},{id:23,texte:`Comportements individuels / impact réel`,reponses:[{t:`Oui, chaque geste compte et entraîne un changement collectif`,p:4},{t:`Oui, mais soutenus par des politiques publiques ambitieuses`,p:3},{t:`Non, marginaux face à l\u0027empreinte industrielle`,p:2},{t:`Non, distraction du vrai problème structurel`,p:1}]},{id:24,texte:`Smart cities`,reponses:[{t:`Oui, réduit gaspillages et améliore l\u0027efficacité énergétique`,p:4},{t:`Oui, si les technologies servent citoyens et environnement`,p:3},{t:`Non, ne s\u0027attaque pas à la surconsommation ni à l\u0027artificialisation`,p:2},{t:`Non, illusion technologique qui perpétue le modèle`,p:1}]}];\nconst state = $(\u0027Merge: Après Init\u0027).all()[0].json;\n\nconst rawHistory = $(\u0027HTTP: Récupérer Historique\u0027).all();\nlet history = [];\nif (rawHistory.length \u003e 0) { const h = rawHistory[0].json; history = Array.isArray(h) ? h : []; }\nconst rawScores = $(\u0027HTTP: Récupérer Scores\u0027).all();\nlet scores = [];\nif (rawScores.length \u003e 0) { const s = rawScores[0].json; scores = Array.isArray(s) ? s : []; }\nconst rawRag = $(\u0027HTTP: Recherche RAG\u0027).all();\nlet ragChunks = [];\nif (rawRag.length \u003e 0 \u0026\u0026 !rawRag[0].json.error) {\n  const r = rawRag[0].json; ragChunks = Array.isArray(r) ? r : [];\n}\n\nconst posedIds = scores.map(s =\u003e s.question_id);\nconst nextQ = QUESTIONS.find(q =\u003e !posedIds.includes(q.id)) || null;\nconst scorePartiel = scores.reduce((sum, s) =\u003e sum + (s.points || 0), 0);\nconst chunksText = ragChunks.map(c =\u003e c.contenu).join(\u0027\\n\\n---\\n\\n\u0027) || \u0027(base de connaissances non encore chargee)\u0027;\nconst historyText = history.map(m =\u003e \u0027[\u0027 + m.auteur.toUpperCase() + \u0027]: \u0027 + m.contenu).join(\u0027\\n\u0027) || \u0027(debut de la conversation)\u0027;\nconst nextQTexte = nextQ ? nextQ.texte : \u0027Toutes les questions ont ete posees. Conclus en synthetisant les positions.\u0027;\n\nconst questionnaireRefDisplay = QUESTIONS.map(q =\u003e\n  \u0027Q\u0027 + q.id + \u0027 - \u0027 + q.texte + \u0027:\\n\u0027 + q.reponses.map((r, i) =\u003e \u0027  \u0027 + \u0027ABCD\u0027[i] + \u0027) \u0027 + r.t).join(\u0027\\n\u0027)\n).join(\u0027\\n\\n\u0027);\n\nconst choices4 = nextQ ? nextQ.reponses.map((r, i) =\u003e \u0027ABCD\u0027[i] + \u0027) \u0027 + r.t).join(\u0027\\n\u0027) : \u0027\u0027;\nconst choices4Scoring = nextQ ? nextQ.reponses.map((r, i) =\u003e \u0027ABCD\u0027[i] + \u0027) \u0027 + r.t + \u0027 -\u003e \u0027 + r.p + \u0027 pts\u0027).join(\u0027\\n\u0027) : \u0027\u0027;\n\nconst isFirstMessage = history.length === 0;\n\nconst debateContext = isFirstMessage\n  ? \"Tu vas ouvrir le debat en prenant ton role. Tu te presentes naturellement dans ta posture de \" + state.role + \" (sans jamais mentionner que tu es une IA), tu poses le contexte depuis ta perspective frugaliste.\"\n  : \"Tu es en debat. Tu challenges les positions de ton interlocuteur de facon argumentee et fluide. Tu ne mentionnes jamais que tu es une IA.\";\n\nconst nextQInstruction = isFirstMessage\n  ? \"Dans ton message d\u0027ouverture, apres t\u0027etre presente, pose naturellement cette premiere question et presente les 4 choix de reponse exactement comme ci-dessous (une par ligne) :\\nQuestion : \" + nextQTexte + \"\\n\" + choices4\n  : \"Dans ta replique, pose naturellement cette question et presente les 4 choix exactement comme ci-dessous (une par ligne) :\\nQuestion : \" + nextQTexte + \"\\n\" + choices4;\n\nconst systemPrompt = \"Tu es une intelligence artificielle dont la vision du monde est profondement frugaliste et decroissante.\\n\\n\"\n  + \"Tu incarnes le role suivant : \" + state.role + \".\\n\"\n  + \"Tu t\u0027exprimes exclusivement depuis ce role. Tu ne sors jamais de ce role.\\n\\n\"\n  + \"Base de connaissances frugaliste :\\n\" + chunksText + \"\\n\\n\"\n  + debateContext + \"\\n\\n\"\n  + \"Regles absolues pour le questionnaire :\\n\"\n  + \"- Une seule question par message\\n\"\n  + \"- Ne jamais annoncer qu\u0027il y a un questionnaire ni mentionner les scores\\n\"\n  + \"- Presenter les 4 choix (A/B/C/D) apres la question, tels quels\\n\"\n  + \"- Attendre la reponse avant la question suivante\\n\\n\"\n  + \"Questionnaire de reference :\\n\" + questionnaireRefDisplay + \"\\n\\n\"\n  + \"Questions deja posees : \" + (posedIds.length \u003e 0 ? posedIds.join(\u0027, \u0027) : \u0027aucune\u0027) + \"\\n\"\n  + nextQInstruction + \"\\n\\n\"\n  + \"Historique :\\n\" + historyText;\n\nconst scoringPrompt = nextQ\n  ? \"Analyse si le message suivant repond a la question Q\" + nextQ.id + \".\\n\\n\"\n    + \"Message :\\n\" + (state.message || \u0027(aucun)\u0027) + \"\\n\\n\"\n    + \"Question : \" + nextQTexte + \"\\n\"\n    + \"Options :\\n\" + choices4Scoring + \"\\n\\n\"\n    + \"JSON uniquement : {\\\"question_id\\\": \" + nextQ.id + \", \\\"points\\\": X, \\\"reponse_detectee\\\": \\\"A\\\"} ou {\\\"question_id\\\": null}\"\n  : \"{\\\"question_id\\\": null}\";\n\nconst userContent = isFirstMessage\n  ? \"Ouvre le debat dans ton role de \" + state.role + \". Presente-toi, pose le contexte et engage avec ta premiere question.\"\n  : (state.message || \u0027Reponds a ton interlocuteur.\u0027);\n\nreturn [{\n  json: {\n    ...state,\n    system_prompt: systemPrompt,\n    scoring_prompt: scoringPrompt,\n    user_content: userContent,\n    scores: scores,\n    score_partiel: scorePartiel,\n    questions_repondues: posedIds.length,\n    questions_restantes: 24 - posedIds.length,\n    posed_ids: posedIds,\n    next_question: nextQ,\n    rag_chunks: ragChunks,\n    frugaliste_messages: [\n      { role: \u0027system\u0027, content: systemPrompt },\n      { role: \u0027user\u0027, content: userContent }\n    ]\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0014",
+                      "name":  "HTTP: Appeler LLM Frugaliste",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2600,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $json.OLLAMA_URL + \u0027/api/chat\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ model: $json.FRUGALISTE_MODEL, messages: $json.frugaliste_messages, stream: false }) }}",
+                                         "options":  {
+                                                         "timeout":  180000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0015",
+                      "name":  "HTTP: Classificateur Scoring",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       2800,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $(\u0027Code: Construire Prompt\u0027).all()[0].json.OLLAMA_URL + \u0027/api/chat\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ model: $(\u0027Code: Construire Prompt\u0027).all()[0].json.FRUGALISTE_MODEL, messages: [{ role: \u0027user\u0027, content: $(\u0027Code: Construire Prompt\u0027).all()[0].json.scoring_prompt }], stream: false, options: { temperature: 0 } }) }}",
+                                         "options":  {
+                                                         "timeout":  60000
+                                                     }
+                                     },
+                      "continueOnFail":  true
+                  },
+                  {
+                      "id":  "b000-0016",
+                      "name":  "Code: Parser Score \u0026 État",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       3000,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const classifResp = $input.all()[0].json;\nconst state = $(\u0027Code: Construire Prompt\u0027).all()[0].json;\nconst frugResp = $(\u0027HTTP: Appeler LLM Frugaliste\u0027).all()[0].json;\n\nconst frugText = (frugResp.message \u0026\u0026 frugResp.message.content) ? frugResp.message.content : \u0027\u0027;\n\n// Parser la réponse du classificateur\nlet scoring = { question_id: null, points: null, reponse_detectee: null };\ntry {\n  const rawContent = (classifResp.message \u0026\u0026 classifResp.message.content) ? classifResp.message.content : \u0027\u0027;\n  const match = rawContent.match(/\\{[\\s\\S]*?\\}/);\n  if (match) {\n    const parsed = JSON.parse(match[0]);\n    if (parsed.question_id !== null \u0026\u0026 parsed.question_id !== undefined) {\n      scoring = parsed;\n    }\n  }\n} catch(e) {\n  // Scoring non extractible — pas grave, on continue\n}\n\n// Calculer le score intermédiaire\nconst newPoints = (scoring.question_id \u0026\u0026 scoring.points) ? scoring.points : 0;\nconst scorePartiel = state.score_partiel + newPoints;\nconst questionsRepondues = state.questions_repondues + (scoring.question_id ? 1 : 0);\n\nreturn [{\n  json: {\n    ...state,\n    frugaliste_response: frugText,\n    scoring: scoring,\n    score_partiel: scorePartiel,\n    questions_repondues: questionsRepondues,\n    questions_restantes: 24 - questionsRepondues,\n    fin_session: questionsRepondues \u003e= 24\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0017",
+                      "name":  "HTTP: Insérer Message Frugaliste",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       3200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $json.SUPABASE_URL + \u0027/messages\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Prefer",
+                                                                                         "value":  "return=minimal"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ session_id: $json.session_id, tour: $json.tour + 1, auteur: \u0027frugaliste\u0027, contenu: $json.frugaliste_response }) }}",
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     },
+                      "continueOnFail":  true
+                  },
+                  {
+                      "id":  "b000-0018",
+                      "name":  "IF: Score Détecté",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       3400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "cond-score",
+                                                                                   "leftValue":  "={{ $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring \u0026\u0026 $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring.question_id !== null \u0026\u0026 $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring.question_id !== undefined }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0019",
+                      "name":  "HTTP: Insérer Score",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       3600,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.SUPABASE_URL + \u0027/scores\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Prefer",
+                                                                                         "value":  "return=minimal"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ session_id: $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.session_id, question_id: $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring.question_id, reponse: $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring.reponse_detectee, points: $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json.scoring.points }) }}",
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     },
+                      "continueOnFail":  true
+                  },
+                  {
+                      "id":  "b000-0020",
+                      "name":  "Merge: Après Score",
+                      "type":  "n8n-nodes-base.merge",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       3800,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "append"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0021",
+                      "name":  "Code: État Final Avant Réponse",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       4000,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "// Récupérer l\u0027état depuis Code: Parser Score \u0026 État (source de vérité)\nconst state = $(\u0027Code: Parser Score \u0026 État\u0027).all()[0].json;\nreturn [{ json: state }];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0022",
+                      "name":  "IF: Fin Session",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       4200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "id":  "cond-fin",
+                                                                                   "leftValue":  "={{ $json.fin_session }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0023",
+                      "name":  "Code: Préparer Message Final",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       4400,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const PROFILS = [\n  {min:24,max:42,nom:\u0027Souveraineté et sobriété radicales\u0027,desc:\u0027Rejet de la technologie comme solution, transformation profonde des modes de vie, décroissance et relocalisation\u0027},\n  {min:43,max:60,nom:\u0027Régulation et changement de cap\u0027,desc:\u0027Technologie comme outil subordonné à une sobriété forte, régulation et planification écologique prioritaires\u0027},\n  {min:61,max:78,nom:\u0027Pragmatisme et mix équilibré\u0027,desc:\u0027Mix technologie + évolutions sociétales, approche tous azimuts\u0027},\n  {min:79,max:96,nom:\u0027Confiance technologique et innovation\u0027,desc:\u0027Forte confiance dans le progrès technique pour découpler prospérité et impact\u0027}\n];\n\nconst state = $input.all()[0].json;\nconst profil = PROFILS.find(p =\u003e state.score_partiel \u003e= p.min \u0026\u0026 state.score_partiel \u003c= p.max) || PROFILS[2];\n\nconst chunksText = (state.rag_chunks || []).map(c =\u003e c.contenu).join(\u0027\\n\\n---\\n\\n\u0027) || \u0027(utilise tes connaissances générales du frugalisme)\u0027;\n\nconst finPromptSystem = `Tu as mené la conversation jusqu\u0027à son terme. Ton interlocuteur a répondu à l\u0027ensemble du questionnaire.\\n\\nRésultat :\\n- Score total : ${state.score_partiel}/96\\n- Profil : ${profil.nom}\\n- Description : ${profil.desc}\\n\\nDans ton rôle de ${state.role}, tu vas :\\n1. Révéler ce résultat de façon naturelle et bienveillante, sans jamais mentionner qu\u0027il s\u0027agissait d\u0027un questionnaire noté\\n2. Proposer des pistes concrètes pour évoluer vers plus de frugalité, en t\u0027appuyant sur ta base de connaissances et en restant dans ton personnage\\n\\nExtraits de ta base de connaissances pour guider tes conseils :\\n${chunksText}`;\n\nreturn [{\n  json: {\n    ...state,\n    profil: profil,\n    score_final: state.score_partiel,\n    fin_messages: [\n      { role: \u0027system\u0027, content: finPromptSystem },\n      { role: \u0027user\u0027, content: \u0027Conclus la conversation de façon mémorable dans ton rôle.\u0027 }\n    ]\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0024",
+                      "name":  "HTTP: LLM Message de Fin",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       4600,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "method":  "POST",
+                                         "url":  "={{ $json.OLLAMA_URL + \u0027/api/chat\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ model: $json.FRUGALISTE_MODEL, messages: $json.fin_messages, stream: false }) }}",
+                                         "options":  {
+                                                         "timeout":  120000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0025",
+                      "name":  "Code: Extraire Message Final",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       4800,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const llmResp = $input.all()[0].json;\nconst state = $(\u0027Code: Préparer Message Final\u0027).all()[0].json;\nconst finalText = (llmResp.message \u0026\u0026 llmResp.message.content) ? llmResp.message.content : state.frugaliste_response;\nreturn [{ json: { ...state, final_message: finalText } }];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0026",
+                      "name":  "HTTP: Clôturer Session Supabase",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       5000,
+                                       180
+                                   ],
+                      "parameters":  {
+                                         "method":  "PATCH",
+                                         "url":  "={{ $json.SUPABASE_URL + \u0027/sessions?id=eq.\u0027 + $json.session_id }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "Content-Type",
+                                                                                         "value":  "application/json"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Prefer",
+                                                                                         "value":  "return=minimal"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "sendBody":  true,
+                                         "specifyBody":  "json",
+                                         "jsonBody":  "={{ JSON.stringify({ statut: \u0027terminee\u0027, score_final: $json.score_final, date_fin: new Date().toISOString() }) }}",
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "b000-0027",
+                      "name":  "Merge: Avant Réponse Finale",
+                      "type":  "n8n-nodes-base.merge",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       5200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "append"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0028",
+                      "name":  "Code: Construire Réponse Webhook",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       5400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "// Récupérer l\u0027état — depuis la branche fin ou la branche normale\nlet state;\ntry {\n  state = $(\u0027Code: Extraire Message Final\u0027).all()[0].json;\n} catch(e) {\n  state = $(\u0027Code: État Final Avant Réponse\u0027).all()[0].json;\n}\n\nconst message = state.final_message || state.frugaliste_response || \u0027\u0027;\n\nreturn [{\n  json: {\n    session_id: state.session_id,\n    message: message,\n    score_partiel: state.score_partiel || 0,\n    questions_repondues: state.questions_repondues || 0,\n    questions_restantes: state.questions_restantes || 24,\n    derniere_question_scoree: (state.scoring \u0026\u0026 state.scoring.question_id) ? state.scoring.question_id : null,\n    fin_session: state.fin_session || false,\n    profil: state.fin_session ? (state.profil ? state.profil.nom : null) : null\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "b000-0029",
+                      "name":  "Respond to Webhook",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       5600,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ $json }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Origin",
+                                                                                                     "value":  "*"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     }
+                  }
+              ],
+    "connections":  {
+                        "Webhook: Frugal AI Frugaliste":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "Config: Constantes",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       },
+                        "Config: Constantes":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Code: Valider \u0026 Init",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Code: Valider \u0026 Init":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "IF: Est Initialisation",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      },
+                        "IF: Est Initialisation":  {
+                                                       "main":  [
+                                                                    [
+                                                                        {
+                                                                            "node":  "HTTP: Créer Session Supabase",
+                                                                            "type":  "main",
+                                                                            "index":  0
+                                                                        }
+                                                                    ],
+                                                                    [
+                                                                        {
+                                                                            "node":  "Merge: Après Init",
+                                                                            "type":  "main",
+                                                                            "index":  1
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                   },
+                        "HTTP: Créer Session Supabase":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Code: Extraire Session Créée",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "Code: Extraire Session Créée":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Merge: Après Init",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "Merge: Après Init":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "HTTP: Récupérer Historique",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   },
+                                                                   {
+                                                                       "node":  "HTTP: Récupérer Scores",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   },
+                                                                   {
+                                                                       "node":  "Code: Préparer Embedding",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "HTTP: Récupérer Historique":  {
+                                                           "main":  [
+
+                                                                    ]
+                                                       },
+                        "HTTP: Récupérer Scores":  {
+                                                       "main":  [
+
+                                                                ]
+                                                   },
+                        "Code: Préparer Embedding":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "HTTP: Embedding Requête",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          },
+                                                                          {
+                                                                              "node":  "Code: Construire Prompt",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "HTTP: Embedding Requête":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "HTTP: Recherche RAG",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "HTTP: Recherche RAG":  {
+                                                    "main":  [
+
+                                                             ]
+                                                },
+                        "Code: Construire Prompt":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "HTTP: Appeler LLM Frugaliste",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "HTTP: Appeler LLM Frugaliste":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "HTTP: Classificateur Scoring",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "HTTP: Classificateur Scoring":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Code: Parser Score \u0026 État",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "Code: Parser Score \u0026 État":  {
+                                                               "main":  [
+                                                                            [
+                                                                                {
+                                                                                    "node":  "HTTP: Insérer Message Frugaliste",
+                                                                                    "type":  "main",
+                                                                                    "index":  0
+                                                                                }
+                                                                            ]
+                                                                        ]
+                                                           },
+                        "HTTP: Insérer Message Frugaliste":  {
+                                                                 "main":  [
+                                                                              [
+                                                                                  {
+                                                                                      "node":  "IF: Score Détecté",
+                                                                                      "type":  "main",
+                                                                                      "index":  0
+                                                                                  }
+                                                                              ]
+                                                                          ]
+                                                             },
+                        "IF: Score Détecté":  {
+                                                  "main":  [
+                                                               [
+                                                                   {
+                                                                       "node":  "HTTP: Insérer Score",
+                                                                       "type":  "main",
+                                                                       "index":  0
+                                                                   }
+                                                               ],
+                                                               [
+                                                                   {
+                                                                       "node":  "Merge: Après Score",
+                                                                       "type":  "main",
+                                                                       "index":  1
+                                                                   }
+                                                               ]
+                                                           ]
+                                              },
+                        "HTTP: Insérer Score":  {
+                                                    "main":  [
+                                                                 [
+                                                                     {
+                                                                         "node":  "Merge: Après Score",
+                                                                         "type":  "main",
+                                                                         "index":  0
+                                                                     }
+                                                                 ]
+                                                             ]
+                                                },
+                        "Merge: Après Score":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Code: État Final Avant Réponse",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               },
+                        "Code: État Final Avant Réponse":  {
+                                                               "main":  [
+                                                                            [
+                                                                                {
+                                                                                    "node":  "IF: Fin Session",
+                                                                                    "type":  "main",
+                                                                                    "index":  0
+                                                                                }
+                                                                            ]
+                                                                        ]
+                                                           },
+                        "IF: Fin Session":  {
+                                                "main":  [
+                                                             [
+                                                                 {
+                                                                     "node":  "Code: Préparer Message Final",
+                                                                     "type":  "main",
+                                                                     "index":  0
+                                                                 }
+                                                             ],
+                                                             [
+                                                                 {
+                                                                     "node":  "Merge: Avant Réponse Finale",
+                                                                     "type":  "main",
+                                                                     "index":  1
+                                                                 }
+                                                             ]
+                                                         ]
+                                            },
+                        "Code: Préparer Message Final":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "HTTP: LLM Message de Fin",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "HTTP: LLM Message de Fin":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "Code: Extraire Message Final",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "Code: Extraire Message Final":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "HTTP: Clôturer Session Supabase",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "HTTP: Clôturer Session Supabase":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Merge: Avant Réponse Finale",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            },
+                        "Merge: Avant Réponse Finale":  {
+                                                            "main":  [
+                                                                         [
+                                                                             {
+                                                                                 "node":  "Code: Construire Réponse Webhook",
+                                                                                 "type":  "main",
+                                                                                 "index":  0
+                                                                             }
+                                                                         ]
+                                                                     ]
+                                                        },
+                        "Code: Construire Réponse Webhook":  {
+                                                                 "main":  [
+                                                                              [
+                                                                                  {
+                                                                                      "node":  "Respond to Webhook",
+                                                                                      "type":  "main",
+                                                                                      "index":  0
+                                                                                  }
+                                                                              ]
+                                                                          ]
+                                                             }
+                    },
+    "active":  true,
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "saveManualExecutions":  true,
+                     "callerPolicy":  "workflowsFromSameOwner",
+                     "errorWorkflow":  ""
+                 },
+    "tags":  [
+                 {
+                     "name":  "frugal-ai"
+                 }
+             ],
+    "id":  "bbbbbbbb-b000-4000-b000-000000000002"
+}

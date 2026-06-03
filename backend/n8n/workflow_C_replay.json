@@ -1,0 +1,262 @@
+{
+    "name":  "Frugal AI - Workflow C - Replay Session",
+    "nodes":  [
+                  {
+                      "id":  "c000-0001",
+                      "name":  "Webhook: Replay Session",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       0,
+                                       300
+                                   ],
+                      "webhookId":  "frugalai-replay",
+                      "parameters":  {
+                                         "httpMethod":  "GET",
+                                         "path":  "frugalai-replay",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "c000-0002",
+                      "name":  "Config: Constantes Replay",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const CONFIG = {\n  SUPABASE_URL: \u0027http://host.docker.internal:8000\u0027,\n  SUPABASE_KEY: \u0027eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE\u0027\n};\nconst query = $input.all()[0].json.query || {};\nconst sessionId = query.session_id || null;\nif (!sessionId) {\n  throw new Error(\u0027Paramètre session_id manquant. Usage: GET /webhook/frugalai-replay?session_id=\u003cuuid\u003e\u0027);\n}\nreturn [{ json: { ...CONFIG, session_id: sessionId } }];"
+                                     }
+                  },
+                  {
+                      "id":  "c000-0003",
+                      "name":  "HTTP: Récupérer Session",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       400,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "={{ $json.SUPABASE_URL + \u0027/sessions?id=eq.\u0027 + $json.session_id }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "c000-0004",
+                      "name":  "HTTP: Récupérer Messages",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       600,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "={{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_URL + \u0027/messages?session_id=eq.\u0027 + $(\u0027Config: Constantes Replay\u0027).all()[0].json.session_id + \u0027\u0026order=tour.asc\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "c000-0005",
+                      "name":  "HTTP: Récupérer Scores Session",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "typeVersion":  4.2,
+                      "position":  [
+                                       800,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "method":  "GET",
+                                         "url":  "={{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_URL + \u0027/scores?session_id=eq.\u0027 + $(\u0027Config: Constantes Replay\u0027).all()[0].json.session_id + \u0027\u0026order=question_id.asc\u0027 }}",
+                                         "sendHeaders":  true,
+                                         "headerParameters":  {
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "name":  "apikey",
+                                                                                         "value":  "={{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Authorization",
+                                                                                         "value":  "=Bearer {{ $(\u0027Config: Constantes Replay\u0027).all()[0].json.SUPABASE_KEY }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "name":  "Accept",
+                                                                                         "value":  "application/json"
+                                                                                     }
+                                                                                 ]
+                                                              },
+                                         "options":  {
+                                                         "timeout":  15000
+                                                     }
+                                     }
+                  },
+                  {
+                      "id":  "c000-0006",
+                      "name":  "Code: Construire Réponse Replay",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       1000,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "mode":  "runOnceForAllItems",
+                                         "jsCode":  "const PROFILS = [\n  {min:24,max:42,nom:\u0027Souveraineté et sobriété radicales\u0027},\n  {min:43,max:60,nom:\u0027Régulation et changement de cap\u0027},\n  {min:61,max:78,nom:\u0027Pragmatisme et mix équilibré\u0027},\n  {min:79,max:96,nom:\u0027Confiance technologique et innovation\u0027}\n];\n\nconst rawSession = $(\u0027HTTP: Récupérer Session\u0027).all()[0].json;\nconst session = Array.isArray(rawSession) ? rawSession[0] : rawSession;\n\nconst rawMessages = $(\u0027HTTP: Récupérer Messages\u0027).all()[0].json;\nconst messages = Array.isArray(rawMessages) ? rawMessages : [];\n\nconst rawScores = $input.all()[0].json;\nconst scores = Array.isArray(rawScores) ? rawScores : [];\n\nconst scoreFinal = session ? (session.score_final || null) : null;\nconst profil = scoreFinal ? (PROFILS.find(p =\u003e scoreFinal \u003e= p.min \u0026\u0026 scoreFinal \u003c= p.max) || null) : null;\n\nreturn [{\n  json: {\n    session: session || null,\n    messages: messages,\n    scores: scores,\n    score_final: scoreFinal,\n    profil: profil ? profil.nom : null\n  }\n}];"
+                                     }
+                  },
+                  {
+                      "id":  "c000-0007",
+                      "name":  "Respond to Webhook Replay",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       1200,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ JSON.stringify($json) }}",
+                                         "options":  {
+                                                         "responseHeaders":  {
+                                                                                 "entries":  [
+                                                                                                 {
+                                                                                                     "name":  "Content-Type",
+                                                                                                     "value":  "application/json"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "name":  "Access-Control-Allow-Origin",
+                                                                                                     "value":  "*"
+                                                                                                 }
+                                                                                             ]
+                                                                             }
+                                                     }
+                                     }
+                  }
+              ],
+    "connections":  {
+                        "Webhook: Replay Session":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "Config: Constantes Replay",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "Config: Constantes Replay":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "HTTP: Récupérer Session",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      },
+                        "HTTP: Récupérer Session":  {
+                                                        "main":  [
+                                                                     [
+                                                                         {
+                                                                             "node":  "HTTP: Récupérer Messages",
+                                                                             "type":  "main",
+                                                                             "index":  0
+                                                                         }
+                                                                     ]
+                                                                 ]
+                                                    },
+                        "HTTP: Récupérer Messages":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "HTTP: Récupérer Scores Session",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "HTTP: Récupérer Scores Session":  {
+                                                               "main":  [
+                                                                            [
+                                                                                {
+                                                                                    "node":  "Code: Construire Réponse Replay",
+                                                                                    "type":  "main",
+                                                                                    "index":  0
+                                                                                }
+                                                                            ]
+                                                                        ]
+                                                           },
+                        "Code: Construire Réponse Replay":  {
+                                                                "main":  [
+                                                                             [
+                                                                                 {
+                                                                                     "node":  "Respond to Webhook Replay",
+                                                                                     "type":  "main",
+                                                                                     "index":  0
+                                                                                 }
+                                                                             ]
+                                                                         ]
+                                                            }
+                    },
+    "active":  true,
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "saveManualExecutions":  false,
+                     "callerPolicy":  "workflowsFromSameOwner"
+                 },
+    "tags":  [
+                 {
+                     "name":  "frugal-ai"
+                 }
+             ],
+    "id":  "cccccccc-c000-4000-c000-000000000003"
+}

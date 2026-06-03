@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frugaliste — IA enrichie</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+  <div class="start-overlay" id="start-overlay">
+    <div class="start-overlay-content">
+      <p class="start-title">Frugaliste</p>
+      <p class="start-sub">L'écran 2 s'ouvrira dans une nouvelle fenêtre</p>
+      <button type="button" class="start-btn" id="start-btn">Démarrer</button>
+      <p class="start-hint">Cliquez ou appuyez sur une touche</p>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="avatar" id="avatar">🎓</div>
+    <span class="ai-name" id="ai-name">Teacher</span>
+  </header>
+
+  <main class="response-area">
+    <p class="response-text placeholder" id="response">
+      Choisissez un rôle et une IA, puis appuyez sur Entrée pour lancer la conversation.
+    </p>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-group" id="roles-bar"></div>
+    <div class="footer-group" id="ais-bar"></div>
+  </footer>
+
+  <div class="status-bar" id="status"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/shared.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
