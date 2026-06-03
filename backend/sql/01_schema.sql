@@ -51,8 +51,10 @@ CREATE TABLE IF NOT EXISTS chunks (
     metadata    JSONB
 );
 
--- Index IVFFlat pour la recherche par similarité cosinus
-CREATE INDEX IF NOT EXISTS idx_chunks_embedding
-    ON chunks
-    USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
+-- NOTE : pas d'index IVFFlat ici. Sur un petit corpus (quelques centaines de
+-- chunks), l'index ivfflat (lists=100) dégradait fortement le rappel de la
+-- recherche (peu de candidats retournés). Sur ce volume, le scan exact est à la
+-- fois rapide et bien plus précis. À réintroduire seulement si le corpus grossit
+-- (dizaines de milliers de chunks), en recalibrant `lists` :
+--   CREATE INDEX idx_chunks_embedding ON chunks
+--       USING ivfflat (embedding vector_cosine_ops) WITH (lists = N);

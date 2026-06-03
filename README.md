@@ -26,27 +26,24 @@ Une **IA frugaliste**, qui incarne un rôle au choix (prêtre, coach, psychanaly
 | **`supabase-local/`** | Supabase auto-hébergé (PostgreSQL + pgvector). Dépôt tiers, **non versionné** ici. |
 | **`docs/`** | Cahier des charges et documents de référence. |
 
-## Démarrage rapide
+## 🚀 Première installation
+
+Tu pars de zéro (machine neuve, jamais utilisé Docker) ? Suis le **guide pas à pas**, qui explique tout — des prérequis jusqu'au premier débat :
+
+👉 **[guide-installation/README.md](guide-installation/README.md)**
+
+## Démarrage rapide (projet déjà installé)
 
 ```powershell
-.\lancer-frugal-ai.ps1
+.\lancer-frugal-ai.ps1     # démarre tout + ouvre le site
+.\arreter-frugal-ai.ps1    # arrête le serveur web et les conteneurs
 ```
-
-Lance Docker (n8n + OCR + Ollama), Supabase, et sert le site sur `http://localhost:8080`.
 
 - Site : http://localhost:8080
 - n8n : http://localhost:5678
-- Supabase Studio : http://localhost:3000
+- Supabase Studio : http://localhost:8000 (ou :3000 selon la configuration)
 
-Pour tout arrêter :
-
-```powershell
-.\arreter-frugal-ai.ps1
-```
-
-Stoppe le serveur web et les conteneurs Docker (sans les supprimer → relance rapide).
-
-Pour une première installation (build, modèles, etc.), voir [`backend/README.md`](backend/README.md). Pour le détail de l'interface, voir [`web/README.md`](web/README.md).
+Détails par brique : [`backend/README.md`](backend/README.md) (stack Docker) · [`web/README.md`](web/README.md) (interface).
 
 ## Prérequis
 
