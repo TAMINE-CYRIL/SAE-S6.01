@@ -1,94 +1,112 @@
-# Étape 0 — Installer les outils de base
+# Étape 0 — Installer les prérequis
 
-Avant de toucher au projet, il faut installer **4 outils** sur ta machine : WSL2, Docker Desktop, Python et Git. On installe, puis on **vérifie** chacun.
+Avant de lancer le projet, quelques outils doivent être présents sur la machine. Ils permettent de faire fonctionner les services Docker, de récupérer les dépôts nécessaires et de servir l'interface web en local.
 
-> 💡 **Comment lire ce guide** : pour chaque outil, il y a *« Pourquoi »*, *« Installer »*, *« Vérifier »*. Ne passe à l'outil suivant que si la vérification réussit.
+Cette étape concerne principalement Windows 10 et Windows 11. Les commandes sont à exécuter dans PowerShell. Certaines installations peuvent demander un redémarrage de la machine.
 
----
+## 0.1 Installer WSL2
 
-## 0.1 — WSL2 (le moteur Linux de Windows)
+Docker Desktop s'appuie sur WSL2 pour exécuter les conteneurs Linux sous Windows. Il faut donc commencer par vérifier que WSL est installé et configuré en version 2.
 
-**Pourquoi ?** Docker, sur Windows, fait tourner ses conteneurs dans une mini-machine Linux appelée **WSL2**. C'est invisible au quotidien, mais indispensable.
-
-**Installer** — ouvre **PowerShell en administrateur** (clic droit sur le menu Démarrer → « Terminal (admin) ») et tape :
+Ouvrir PowerShell en administrateur, puis exécuter :
 
 ```powershell
 wsl --install
 ```
 
-Redémarre l'ordinateur si Windows le demande.
-
-**Vérifier** :
+Si Windows demande un redémarrage, il faut le faire avant de continuer. Une fois la machine relancée, la commande suivante permet de vérifier l'état de WSL :
 
 ```powershell
 wsl --status
 ```
 
-Tu dois voir « Version par défaut : 2 ». Si tu vois « Version : 1 », tape `wsl --set-default-version 2`.
+La sortie doit indiquer que la version par défaut est la version 2. Si WSL est encore configuré en version 1, il faut forcer la version 2 avec :
 
----
+```powershell
+wsl --set-default-version 2
+```
 
-## 0.2 — Docker Desktop (fait tourner les briques du projet)
+## 0.2 Installer Docker Desktop
 
-**Pourquoi ?** Tout le « moteur » du projet (n8n, Ollama, OCR, Supabase) tourne dans des **conteneurs** Docker : des boîtes isolées qui contiennent déjà tout le nécessaire. Tu n'installes pas n8n ou Ollama à la main — Docker s'en charge.
+Docker est utilisé pour lancer les différents composants du projet : Supabase, n8n, Ollama et le service OCR. L'intérêt est d'éviter une installation manuelle de chaque outil et de garder un environnement reproductible.
 
-**Installer** :
-1. Télécharge Docker Desktop : https://www.docker.com/products/docker-desktop/
-2. Installe-le en laissant l'option **« Use WSL 2 instead of Hyper-V »** cochée.
-3. Lance Docker Desktop et **laisse-le ouvert** (l'icône baleine doit être stable dans la barre des tâches).
-4. Dans Docker Desktop : **Settings → Resources → WSL Integration** → vérifie que l'intégration est activée.
+Télécharger Docker Desktop depuis le site officiel :
 
-**Vérifier** (dans un PowerShell **normal**, pas forcément admin) :
+```text
+https://www.docker.com/products/docker-desktop/
+```
+
+Pendant l'installation, conserver l'option `Use WSL 2 instead of Hyper-V` lorsqu'elle est proposée. Après l'installation, ouvrir Docker Desktop et attendre que le service soit complètement démarré.
+
+Dans les paramètres de Docker Desktop, vérifier également que l'intégration WSL est activée :
+
+```text
+Settings > Resources > WSL Integration
+```
+
+La vérification se fait ensuite dans PowerShell :
 
 ```powershell
 docker --version
 docker info
 ```
 
-`docker --version` affiche un numéro (ex. « Docker version 27.x »).
-`docker info` affiche plein de lignes **sans erreur** rouge. Si tu vois « cannot connect to the Docker daemon », c'est que Docker Desktop n'est pas lancé.
+La première commande doit afficher la version de Docker. La seconde doit afficher les informations du moteur Docker. Si un message indique que le daemon Docker est inaccessible, Docker Desktop n'est probablement pas démarré ou n'a pas encore fini de se lancer.
 
----
+## 0.3 Installer Python
 
-## 0.3 — Python 3 (pour servir le site web en local)
+Python est utilisé pour lancer un petit serveur web local. L'interface du projet ne doit pas être ouverte directement depuis les fichiers HTML, car certaines fonctionnalités, notamment la communication entre les fenêtres, nécessitent un serveur local.
 
-**Pourquoi ?** Le site est composé de fichiers HTML/JS. Pour qu'il fonctionne correctement (la synchro entre les 2 fenêtres), il doit être **servi par un petit serveur web**, pas ouvert directement comme un fichier. Python fournit ce serveur en une commande.
+Télécharger Python depuis :
 
-**Installer** :
-- Télécharge Python : https://www.python.org/downloads/
-- ⚠️ **Important** : à l'installation, coche la case **« Add python.exe to PATH »** en bas de la fenêtre.
+```text
+https://www.python.org/downloads/
+```
 
-**Vérifier** :
+Pendant l'installation, cocher l'option `Add python.exe to PATH`. Cette option permet d'utiliser la commande `python` directement depuis PowerShell.
+
+La vérification se fait avec :
 
 ```powershell
 python --version
 ```
 
-Tu dois voir « Python 3.x ». Si la commande n'est pas reconnue, réinstalle en cochant bien « Add to PATH », ou redémarre PowerShell.
+Si la commande n'est pas reconnue, il faut relancer l'installation de Python en vérifiant que l'ajout au PATH est bien activé, puis rouvrir PowerShell.
 
----
+## 0.4 Installer Git
 
-## 0.4 — Git (pour récupérer le code)
+Git est nécessaire pour récupérer certains dépôts, notamment le dépôt Supabase utilisé pour l'installation locale.
 
-**Pourquoi ?** Git sert à cloner le projet et la base Supabase depuis GitHub.
+Télécharger Git depuis :
 
-**Installer** : https://git-scm.com/download/win (laisse les options par défaut).
+```text
+https://git-scm.com/download/win
+```
 
-**Vérifier puis configurer ton identité** :
+Les options par défaut conviennent pour ce projet. Une fois l'installation terminée, vérifier Git avec :
 
 ```powershell
 git --version
+```
+
+Il est aussi conseillé de configurer son identité Git, même si le projet ne demande pas forcément de contribution au dépôt :
+
+```powershell
 git config --global user.name "Ton Nom"
 git config --global user.email "ton.email@exemple.com"
 ```
 
----
+## 0.5 Ajuster la mémoire disponible pour WSL
 
-## 0.5 — Donner assez de mémoire à WSL (recommandé)
+Les modèles d'IA exécutés localement consomment de la mémoire. Sur Windows, il est préférable d'indiquer explicitement combien de ressources WSL peut utiliser. Cela évite certains ralentissements ou blocages lorsque plusieurs conteneurs tournent en même temps.
 
-**Pourquoi ?** Les modèles IA sont gourmands en RAM. Par défaut, WSL peut s'en allouer trop peu et tout devient très lent (ou plante). On lui réserve une part fixe.
+Créer le fichier suivant :
 
-**Faire** : crée le fichier `C:\Users\<ton-nom-windows>\.wslconfig` avec ce contenu :
+```text
+C:\Users\<ton-nom-windows>\.wslconfig
+```
+
+Ajouter ce contenu :
 
 ```ini
 [wsl2]
@@ -97,19 +115,19 @@ swap=2GB
 processors=8
 ```
 
-> Adapte `memory` à ta machine : laisse au moins 4 Go à Windows. Sur 16 Go de RAM, `11GB` est un bon réglage. Sur 8 Go, mets `5GB` (le projet sera plus lent).
+La valeur `memory` doit être adaptée à la machine. Sur un ordinateur avec 16 Go de RAM, `11GB` est un réglage raisonnable. Sur une machine avec 8 Go de RAM, il vaut mieux indiquer environ `5GB`, même si le projet sera plus lent.
 
-Puis applique en fermant WSL (Docker le relancera tout seul) :
+Après modification, fermer WSL avec :
 
 ```powershell
 wsl --shutdown
 ```
 
----
+Docker relancera WSL automatiquement au prochain démarrage des conteneurs.
 
-## ✅ Récapitulatif — tout doit répondre
+## Vérification finale
 
-Lance ces 4 commandes à la suite ; chacune doit afficher une version :
+Avant de passer à la suite, exécuter les commandes suivantes :
 
 ```powershell
 wsl --status
@@ -118,5 +136,4 @@ python --version
 git --version
 ```
 
-Si les 4 répondent, **les prérequis sont prêts**. Passe à l'étape suivante :
-👉 **[01-supabase.md](01-supabase.md)**
+Si chaque commande répond correctement, les prérequis sont installés. La prochaine étape consiste à démarrer Supabase : [01-supabase.md](01-supabase.md).

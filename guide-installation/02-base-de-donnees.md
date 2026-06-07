@@ -1,14 +1,12 @@
-# Étape 2 — Créer les tables
+# Étape 2 — Initialiser la base de données
 
-**Pourquoi ?** Supabase tourne, mais la base est **vide**. Il faut y créer la structure : les tables (`sessions`, `messages`, `scores`, `chunks`), activer l'extension **pgvector**, et installer les **fonctions** de recherche que les workflows utiliseront. Un script fait tout ça pour toi.
+Après le démarrage de Supabase, la base PostgreSQL est disponible mais ne contient pas encore la structure attendue par Frugal AI. Il faut créer les tables utilisées par l'application, activer l'extension pgvector et ajouter les fonctions SQL appelées par les workflows n8n.
 
-> 🛡️ Le script est **idempotent** : tu peux le relancer sans risque, il ne détruit jamais de données existantes (il crée uniquement ce qui manque).
+Cette étape est automatisée par le script `init_supabase.ps1`, situé dans `backend/scripts/`.
 
----
+## 2.1 Exécuter le script d'initialisation
 
-## 2.1 — Lancer le script
-
-Depuis la racine du projet :
+Depuis la racine du projet, lancer :
 
 ```powershell
 cd backend\scripts
@@ -16,20 +14,29 @@ cd backend\scripts
 cd ..\..
 ```
 
-> ❓ **« .ps1 ne peut pas être exécuté car l'exécution de scripts est désactivée »** ?
-> Lance une fois, dans le même PowerShell :
-> ```powershell
-> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-> ```
-> Cela autorise les scripts **pour cette session uniquement** (sans danger), puis relance le script.
+Le script applique les fichiers SQL prévus par le projet. Il crée notamment les tables `sessions`, `messages`, `scores` et `chunks`. Il active aussi l'extension `vector`, utilisée pour stocker les représentations vectorielles des textes.
 
----
+Le script est prévu pour pouvoir être relancé. S'il détecte que certains éléments existent déjà, il les ignore sans supprimer les données existantes.
 
-## 2.2 — Ce que tu dois voir
+## 2.2 Autoriser temporairement les scripts PowerShell
 
-Le script applique deux fichiers SQL et affiche, pour chacun :
+Sur certaines machines, PowerShell bloque l'exécution des scripts `.ps1`. Si un message indique que l'exécution de scripts est désactivée, lancer cette commande dans la même fenêtre PowerShell :
 
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
+
+Cette autorisation ne vaut que pour la session PowerShell en cours. Une fois la commande exécutée, relancer le script d'initialisation :
+
+```powershell
+.\init_supabase.ps1
+```
+
+## 2.3 Résultat attendu
+
+Le script doit indiquer que les fichiers SQL ont été appliqués. Une sortie similaire à celle-ci est attendue :
+
+```text
 Application de 01_schema.sql ...
   [OK] 01_schema.sql applique
 Application de 02_functions.sql ...
@@ -38,34 +45,33 @@ Application de 02_functions.sql ...
 [DONE] Tables : sessions, messages, scores, chunks (+ pgvector, fonctions RPC)
 ```
 
-Des messages `NOTICE: ... already exists, skipping` peuvent apparaître si tu relances le script : **c'est normal** (les éléments existent déjà).
+Si des messages de type `NOTICE: ... already exists, skipping` apparaissent, cela signifie simplement que certaines tables ou fonctions existaient déjà. Ce comportement est normal lorsque le script est exécuté plusieurs fois.
 
----
+## 2.4 Vérifier les tables
 
-## 2.3 — Vérifier (optionnel mais rassurant)
-
-Pour confirmer que les tables existent :
+La présence des tables peut être vérifiée directement dans le conteneur PostgreSQL :
 
 ```powershell
 docker exec supabase-db psql -U postgres -d postgres -c "\dt"
 ```
 
-Tu dois voir `sessions`, `messages`, `scores`, `chunks` dans la liste.
+La liste doit contenir au minimum les tables suivantes :
 
-Pour confirmer que pgvector est actif :
+```text
+sessions
+messages
+scores
+chunks
+```
+
+Pour vérifier que l'extension pgvector est bien active, utiliser :
 
 ```powershell
 docker exec supabase-db psql -U postgres -d postgres -c "SELECT extname FROM pg_extension WHERE extname='vector';"
 ```
 
-La ligne `vector` doit apparaître.
+La requête doit retourner une ligne contenant `vector`.
 
----
+## Suite de l'installation
 
-## ✅ C'est bon ?
-
-- [ ] `[DONE] Tables : ...` affiché
-- [ ] Les 4 tables apparaissent avec `\dt`
-
-Si oui, on démarre le backend et les modèles IA :
-👉 **[03-backend-et-modeles.md](03-backend-et-modeles.md)**
+Une fois les tables créées et l'extension activée, la base est prête. L'étape suivante consiste à démarrer les services backend et à télécharger les modèles d'IA : [03-backend-et-modeles.md](03-backend-et-modeles.md).

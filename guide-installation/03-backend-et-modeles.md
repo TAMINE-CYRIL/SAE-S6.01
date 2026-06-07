@@ -1,36 +1,31 @@
-# Étape 3 — Démarrer le backend + télécharger les IA
+# Étape 3 — Démarrer le backend et installer les modèles
 
-**Pourquoi ?** C'est ici qu'on lance le cœur du projet :
-- **n8n** : l'outil qui orchestre l'IA frugaliste (construit les questions, calcule le score, interroge le RAG) ;
-- **Ollama** : le moteur qui fait tourner les modèles d'IA **en local** ;
-- **OCR** : un petit service qui extrait le texte des PDF.
+Cette étape met en place les services applicatifs utilisés par Frugal AI. Le backend repose principalement sur trois composants : n8n pour l'orchestration des workflows, Ollama pour l'exécution locale des modèles d'IA, et un service OCR pour extraire le texte des PDF.
 
-Et on **télécharge les modèles** d'IA (Mistral, etc.) dont Ollama a besoin.
+Le script `setup.ps1` automatise le démarrage des conteneurs et le téléchargement des modèles nécessaires.
 
----
+## 3.1 Préparer le fichier `.env`
 
-## 3.1 — Configurer le fichier `.env` du backend
-
-**Pourquoi ?** Le backend lit ses réglages (clés, chemins) dans un fichier `.env`. On part du modèle fourni.
+Le backend lit sa configuration depuis un fichier `.env`. Le projet fournit un modèle qu'il faut copier avant le premier lancement :
 
 ```powershell
 Copy-Item backend\.env.example backend\.env
 ```
 
-Ouvre `backend\.env` (avec le Bloc-notes ou VS Code) et vérifie ces deux lignes :
+Ouvrir ensuite `backend\.env` avec un éditeur de texte, par exemple le Bloc-notes ou VS Code.
 
-| Variable | Quoi mettre |
+Deux points doivent être vérifiés en priorité :
+
+| Variable | Valeur attendue |
 |---|---|
-| `OLLAMA_DATA_PATH` | Le dossier où stocker les modèles téléchargés. Mets `C:/Users/<ton-nom>/.ollama` (avec des `/`). Laisse vide pour utiliser un volume Docker dédié. |
-| `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` | Les clés de démo, copiées depuis `supabase-local/docker/.env` (cherche `ANON_KEY` et `SERVICE_ROLE_KEY`). Ce sont les clés standard. |
+| `OLLAMA_DATA_PATH` | Dossier dans lequel les modèles Ollama seront stockés. Exemple : `C:/Users/<ton-nom>/.ollama`. Il est aussi possible de laisser vide pour utiliser un volume Docker. |
+| `SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_KEY` | Clés issues du fichier `supabase-local/docker/.env`, notamment `ANON_KEY` et `SERVICE_ROLE_KEY`. |
 
-> 💡 Les autres variables (mot de passe Postgres, modèle frugaliste = `mistral`, etc.) ont déjà de bonnes valeurs par défaut. Tu peux ne pas y toucher.
+Les autres variables disposent normalement de valeurs adaptées à l'installation locale. Il n'est donc pas nécessaire de les modifier, sauf besoin particulier.
 
----
+## 3.2 Lancer le script de configuration
 
-## 3.2 — Lancer le script de setup
-
-Ce script fait **tout** : il construit l'image OCR, démarre les 3 conteneurs, attend qu'Ollama soit prêt, puis télécharge les modèles un par un.
+Depuis la racine du projet, exécuter :
 
 ```powershell
 cd backend\scripts
@@ -38,47 +33,62 @@ cd backend\scripts
 cd ..\..
 ```
 
-> ⏳ **C'est l'étape la plus longue** : les modèles pèsent plusieurs Go au total. Laisse tourner. C'est normal de voir « Telechargement mistral... » puis chaque modèle défiler.
+Ce script construit l'image du service OCR, démarre les conteneurs `frugalai-n8n`, `frugalai-ollama` et `frugalai-ocr`, attend que le service Ollama soit disponible, puis télécharge les modèles nécessaires.
 
-Les modèles installés : `mistral`, `nomic-embed-text` (pour le RAG), `llama3.1`, `gemma2:2b`, `phi3`, `qwen2.5`, `deepseek-r1:1.5b`.
+Le téléchargement peut être long lors de la première installation, car plusieurs modèles pèsent plusieurs gigaoctets. Il est normal que le script reste plusieurs minutes sur certaines étapes.
 
----
+Les modèles installés par défaut sont :
 
-## 3.3 — Vérifier
+```text
+mistral
+nomic-embed-text
+llama3.1
+gemma2:2b
+phi3
+qwen2.5
+deepseek-r1:1.5b
+```
 
-**Les 3 conteneurs tournent ?**
+Le modèle `nomic-embed-text` est utilisé pour générer les embeddings nécessaires au RAG.
+
+## 3.3 Vérifier les conteneurs backend
+
+Lorsque le script est terminé, vérifier que les services sont bien lancés :
 
 ```powershell
 docker ps --filter "name=frugalai" --format "{{.Names}} : {{.Status}}"
 ```
 
-Tu dois voir `frugalai-n8n`, `frugalai-ollama`, `frugalai-ocr` en `Up`.
+Les conteneurs suivants doivent apparaître :
 
-> ℹ️ Si `frugalai-ocr` affiche `(unhealthy)`, ce n'est **pas grave** : le service répond quand même (son test de santé interne est juste cosmétique).
-
-**Les modèles sont téléchargés ?**
-
-```powershell
-docker exec frugalai-ollama ollama list
+```text
+frugalai-n8n
+frugalai-ollama
+frugalai-ocr
 ```
 
-Tu dois voir la liste des modèles (au moins `mistral` et `nomic-embed-text`).
-
-**Le service OCR répond ?**
+Ils doivent être en état `Up`. Si `frugalai-ocr` apparaît avec l'état `unhealthy`, cela peut provenir du test de santé interne du conteneur. Le service peut tout de même répondre correctement. La commande suivante permet de le vérifier :
 
 ```powershell
 curl http://localhost:3100/health
 ```
 
-Réponse attendue : `{"status":"ok"}`.
+La réponse attendue est :
 
----
+```json
+{"status":"ok"}
+```
 
-## ✅ C'est bon ?
+## 3.4 Vérifier les modèles Ollama
 
-- [ ] `frugalai-n8n`, `frugalai-ollama`, `frugalai-ocr` sont `Up`
-- [ ] `ollama list` montre les modèles
-- [ ] `/health` répond `ok`
+Pour afficher la liste des modèles installés dans le conteneur Ollama :
 
-Si oui, on configure les workflows n8n :
-👉 **[04-workflows-n8n.md](04-workflows-n8n.md)**
+```powershell
+docker exec frugalai-ollama ollama list
+```
+
+La liste doit contenir au minimum `mistral` et `nomic-embed-text`. Si un modèle manque, relancer le script `setup.ps1` ou télécharger le modèle manuellement depuis le conteneur Ollama.
+
+## Suite de l'installation
+
+Lorsque les trois conteneurs backend sont lancés et que les modèles sont présents, il faut importer les workflows n8n utilisés par l'application : [04-workflows-n8n.md](04-workflows-n8n.md).

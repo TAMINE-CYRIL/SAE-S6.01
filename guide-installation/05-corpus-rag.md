@@ -1,57 +1,69 @@
-# Étape 5 — Ajouter les PDF et construire le RAG
+# Étape 5 — Ajouter le corpus PDF et construire le RAG
 
-**Pourquoi ?** Pour que l'IA frugaliste s'appuie sur de vraies sources (et pas seulement sur ses connaissances générales), on lui fournit un **corpus de PDF** sur la frugalité / décroissance. C'est le **RAG** (*Retrieval-Augmented Generation*) : chaque PDF est lu, découpé en morceaux (**chunks**), transformé en **vecteurs**, et stocké dans Supabase. Quand la frugaliste réagit, elle récupère les morceaux les plus pertinents.
+Le projet Frugal AI peut s'appuyer sur un corpus documentaire pour produire des réponses plus contextualisées. Ce corpus est constitué de fichiers PDF portant sur la frugalité, la sobriété ou la décroissance. Les documents sont extraits, découpés en fragments, vectorisés, puis stockés dans Supabase.
 
-> 💡 **Pourquoi des vecteurs ?** Un vecteur est une « empreinte numérique » du sens d'un texte. Deux textes qui parlent de la même idée ont des vecteurs proches. C'est ce qui permet de retrouver les passages pertinents même si les mots exacts diffèrent.
+Ce mécanisme correspond au RAG, pour *Retrieval-Augmented Generation*. Au moment de générer une réponse, le workflow peut rechercher dans la base les passages les plus proches de la question posée et les fournir au modèle comme contexte.
 
----
+## 5.1 Ajouter les fichiers PDF
 
-## 5.1 — Déposer les PDF
+Les fichiers PDF ne sont pas inclus directement dans le dépôt Git, car ils peuvent être volumineux. Ils doivent être ajoutés manuellement dans le dossier prévu par le projet :
 
-Les PDF **ne sont pas dans le dépôt Git** (trop volumineux) : ils sont transférés séparément.
+```text
+backend/pdfs/
+```
 
-1. Récupère les fichiers `.pdf` du corpus.
-2. Place-les dans le dossier **`backend/pdfs/`** du projet.
+Il suffit de copier les fichiers `.pdf` dans ce dossier. Le corpus peut contenir les documents fournis avec le projet ou d'autres fichiers portant sur les thèmes étudiés. Plus les documents sont nombreux ou volumineux, plus l'ingestion peut prendre du temps.
 
-> Tu peux mettre tes propres PDF si tu veux : n'importe quel document sur la sobriété, la frugalité, la décroissance, etc.
+## 5.2 Exécuter le Workflow A
 
----
+L'ingestion du corpus se fait depuis n8n.
 
-## 5.2 — Lancer l'ingestion (Workflow A)
+Ouvrir l'interface :
 
-1. Ouvre **http://localhost:5678**.
-2. Ouvre le workflow **« Frugal AI - Workflow A - Ingestion RAG »**.
-3. Clique sur **« Execute workflow »** (bouton d'exécution).
+```text
+http://localhost:5678
+```
 
-Le workflow va, pour chaque PDF : extraire le texte (OCR si besoin) → découper en chunks → générer les vecteurs → insérer dans Supabase.
+Puis ouvrir le workflow nommé :
 
-> ⏳ **C'est long sur certains PDF** (surtout les documents scannés, traités par OCR sur le processeur). Laisse tourner jusqu'au bout. Le texte extrait est **mis en cache** dans `backend/ocr_cache/` : si tu relances plus tard, les PDF déjà traités ne sont pas refaits.
+```text
+Frugal AI - Workflow A - Ingestion RAG
+```
 
----
+Lancer ensuite l'exécution avec le bouton `Execute workflow`.
 
-## 5.3 — Vérifier que la base de connaissances est remplie
+Pour chaque PDF, le workflow effectue les opérations suivantes :
+
+```text
+- extraction du texte ;
+- passage par l'OCR si le PDF est scanné ;
+- découpage du texte en chunks ;
+- génération des embeddings ;
+- insertion des fragments et des vecteurs dans Supabase.
+```
+
+Les PDF scannés peuvent ralentir fortement l'ingestion, car l'OCR demande plus de calcul. Le texte extrait est mis en cache dans `backend/ocr_cache/`, ce qui évite de refaire le même traitement lors d'une exécution ultérieure.
+
+## 5.3 Vérifier le contenu de la table `chunks`
+
+Une fois le workflow terminé, vérifier que des fragments ont bien été insérés dans Supabase :
 
 ```powershell
 docker exec supabase-db psql -U postgres -d postgres -c "SELECT count(*) AS chunks, count(DISTINCT source_pdf) AS pdfs FROM chunks;"
 ```
 
-Tu dois voir un nombre de `chunks` > 0 et un nombre de `pdfs` correspondant à tes fichiers. Exemple :
+La colonne `chunks` doit être supérieure à zéro. La colonne `pdfs` indique le nombre de fichiers PDF différents présents dans la base.
 
-```
+Exemple de résultat :
+
+```text
  chunks | pdfs
 --------+------
     281 |   25
 ```
 
-Si `chunks = 0`, l'ingestion n'a pas inséré : vérifie que des PDF sont bien dans `backend/pdfs/` et relance le Workflow A (voir aussi **[07-depannage.md](07-depannage.md)**).
+Si le nombre de chunks est égal à zéro, il faut d'abord vérifier que des fichiers `.pdf` sont bien présents dans `backend/pdfs/`. Il faut ensuite consulter l'exécution du Workflow A dans n8n pour identifier l'étape qui a échoué.
 
----
+## Suite de l'installation
 
-## ✅ C'est bon ?
-
-- [ ] PDF présents dans `backend/pdfs/`
-- [ ] Workflow A exécuté
-- [ ] La requête renvoie des `chunks` > 0
-
-Si oui, dernière étape — on lance et on utilise le projet :
-👉 **[06-lancer-et-utiliser.md](06-lancer-et-utiliser.md)**
+Lorsque le corpus est indexé, l'installation principale est terminée. Il reste à lancer l'application et à vérifier son fonctionnement depuis l'interface web : [06-lancer-et-utiliser.md](06-lancer-et-utiliser.md).

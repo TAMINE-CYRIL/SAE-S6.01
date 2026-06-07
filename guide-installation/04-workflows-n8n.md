@@ -1,29 +1,34 @@
 # Étape 4 — Importer les workflows n8n
 
-**Pourquoi ?** n8n tourne, mais il est **vide**. Les « workflows » sont les recettes qui font travailler l'IA frugaliste. Il y en a trois :
-- **Workflow A** — Ingestion RAG : transforme les PDF en base de connaissances ;
-- **Workflow B** — Frugaliste : le cœur, qui répond aux questions du site (via un *webhook*) ;
-- **Workflow C** — Replay : rejoue une session.
+n8n est utilisé pour piloter la logique applicative de Frugal AI. Après son démarrage, l'interface n8n est vide : il faut donc importer les workflows fournis avec le projet, puis activer ceux qui doivent répondre aux appels de l'interface web.
 
-On va les **importer** puis appliquer les **patches** (les réglages fins du projet : prompts, scoring, personnages, performances).
+Le projet contient trois workflows principaux :
 
-> 💡 **C'est quoi un webhook ?** Une URL que le site appelle pour « réveiller » un workflow. Le site parle à `…/webhook/frugalai-frugaliste` : c'est le Workflow B qui répond.
+| Workflow | Rôle |
+|---|---|
+| Workflow A | Ingestion du corpus RAG à partir des fichiers PDF |
+| Workflow B | Dialogue principal avec l'IA frugaliste, appelé par webhook |
+| Workflow C | Relecture ou replay d'une session existante |
 
----
+Le Workflow B est le plus important pour l'utilisation de l'interface. C'est lui qui reçoit les requêtes envoyées par le site.
 
-## 4.1 — Créer ton compte n8n (manuel, une fois)
+## 4.1 Créer le compte propriétaire n8n
 
-Au tout premier démarrage, n8n demande de créer un compte propriétaire (stocké **localement**, ce n'est pas un compte en ligne).
+Lors du premier accès à n8n, l'application demande de créer un compte propriétaire local. Ce compte n'est pas un compte en ligne : il sert uniquement à accéder à l'instance n8n installée sur la machine.
 
-1. Ouvre **http://localhost:5678** dans ton navigateur.
-2. Remplis le formulaire (email + mot de passe). **Retiens-les.**
-3. Tu arrives sur l'interface n8n (encore vide).
+Ouvrir l'adresse suivante dans le navigateur :
 
-> Cette étape est **obligatoire** : sans compte, le script d'import ne peut pas assigner les workflows.
+```text
+http://localhost:5678
+```
 
----
+Remplir le formulaire avec une adresse email et un mot de passe. Ces identifiants doivent être conservés, car ils permettront de revenir dans l'interface n8n plus tard.
 
-## 4.2 — Importer les workflows + appliquer les réglages (script)
+Cette étape doit être faite avant l'import des workflows. Sans compte propriétaire, le script d'import ne peut pas associer les workflows à un utilisateur n8n.
+
+## 4.2 Importer les workflows
+
+Depuis la racine du projet, lancer le script d'import :
 
 ```powershell
 cd backend\scripts
@@ -31,46 +36,44 @@ cd backend\scripts
 cd ..\..
 ```
 
-Ce script :
-1. retrouve ton compte n8n automatiquement ;
-2. importe les 3 workflows (`backend/n8n/*.json`) ;
-3. applique les patches (`patch_workflow.js` et `patch_workflow_A.js`) ;
-4. redémarre n8n pour tout recharger.
+Le script effectue plusieurs opérations :
 
-> ❓ S'il affiche **« Aucun compte n8n trouve »**, c'est que l'étape 4.1 n'a pas été faite : crée le compte sur http://localhost:5678, puis relance le script.
+```text
+- récupération du compte propriétaire n8n ;
+- import des fichiers JSON présents dans backend/n8n/ ;
+- application des fichiers de patch du projet ;
+- redémarrage de n8n pour prendre en compte les modifications.
+```
 
----
+Si le message `Aucun compte n8n trouve` apparaît, cela signifie que l'étape précédente n'a pas été réalisée. Il faut alors ouvrir `http://localhost:5678`, créer le compte propriétaire, puis relancer le script.
 
-## 4.3 — Activer les workflows (manuel)
+## 4.3 Activer les workflows nécessaires
 
-Importés, les workflows ne sont pas forcément **actifs**. Or le site a besoin que **B** (et **C**) soient actifs pour répondre.
+Après l'import, les workflows peuvent être présents dans n8n sans être actifs. Pour que le site puisse appeler un workflow via webhook, celui-ci doit être activé.
 
-1. Recharge **http://localhost:5678** (au besoin `Ctrl+F5`).
-2. Tu vois les 3 workflows « Frugal AI - Workflow A / B / C ».
-3. Ouvre **Workflow B**, puis bascule l'**interrupteur « Active »** (en haut à droite) sur ON. Fais de même pour **Workflow C**.
-   - Le **Workflow A** n'a pas besoin d'être « actif » : on le lancera à la main pour l'ingestion (étape 5).
+Dans l'interface n8n :
 
----
+```text
+1. Recharger la page http://localhost:5678 si nécessaire.
+2. Ouvrir le Workflow B.
+3. Activer l'interrupteur "Active" situé en haut à droite.
+4. Faire la même opération pour le Workflow C.
+```
 
-## 4.4 — Vérifier que le webhook répond
+Le Workflow A n'a pas besoin d'être activé en permanence. Il sert principalement à construire le corpus RAG et sera exécuté manuellement à l'étape suivante.
 
-Ce petit test confirme que le Workflow B est bien en ligne :
+## 4.4 Tester le webhook principal
+
+Le test suivant permet de vérifier que le Workflow B répond bien aux appels HTTP :
 
 ```powershell
 curl -X POST http://localhost:5678/webhook/frugalai-frugaliste -H "Content-Type: application/json" -d '{"session_id":null,"role":"coach","message":"","tour":0,"modele_standard":"mistral"}' --max-time 240
 ```
 
-> ⏳ Le **premier** appel peut prendre 1 à 3 minutes (Ollama charge le modèle en mémoire pour la première fois). C'est normal. Une réponse en JSON (avec un `message`) = **succès**.
-> Si tu obtiens « webhook non enregistré », c'est que le Workflow B n'est pas activé (reviens en 4.3).
+Lors du premier appel, Ollama peut prendre du temps à charger le modèle en mémoire. Un délai d'une à trois minutes peut donc être normal. Le test est réussi si une réponse JSON est renvoyée, avec un champ contenant le message de la frugaliste.
 
----
+Si la réponse indique que le webhook n'est pas enregistré, le Workflow B n'est probablement pas actif. Dans ce cas, retourner dans n8n et vérifier l'interrupteur d'activation.
 
-## ✅ C'est bon ?
+## Suite de l'installation
 
-- [ ] Compte n8n créé
-- [ ] `import_workflows.ps1` terminé sans erreur
-- [ ] Workflows B et C **activés**
-- [ ] Le test du webhook renvoie du JSON
-
-Si oui, on construit la base de connaissances :
-👉 **[05-corpus-rag.md](05-corpus-rag.md)**
+Une fois les workflows importés et le Workflow B actif, l'application peut répondre aux requêtes. Il reste à construire la base documentaire utilisée par le RAG : [05-corpus-rag.md](05-corpus-rag.md).

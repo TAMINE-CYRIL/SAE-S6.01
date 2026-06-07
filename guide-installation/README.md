@@ -1,79 +1,81 @@
 # Guide d'installation — Frugal AI
 
-Bienvenue 👋 Ce guide t'accompagne **de zéro jusqu'à un projet qui tourne**, même si tu n'as jamais utilisé Docker, n8n ou Supabase. Chaque étape explique **ce que tu fais et pourquoi**, donne les **commandes exactes**, et te dit **comment vérifier que ça a marché** avant de passer à la suite.
+Ce dossier regroupe les différentes étapes nécessaires pour installer et lancer Frugal AI en local. Le projet repose sur plusieurs services qui doivent fonctionner ensemble : une interface web, des workflows n8n, des modèles d'IA exécutés avec Ollama, un service OCR et une base Supabase utilisée pour stocker les données et le corpus vectorisé.
 
-> 🖥️ **Environnement** : Windows 10/11 + PowerShell + Docker Desktop (avec WSL2).
-> Toutes les commandes se lancent dans **PowerShell**, depuis la **racine du projet** (le dossier qui contient ce guide), sauf indication contraire.
+Le guide est prévu pour une installation sur Windows 10 ou Windows 11, avec PowerShell, Docker Desktop et WSL2. Sauf indication contraire, les commandes doivent être exécutées depuis la racine du projet, c'est-à-dire le dossier qui contient ce fichier.
 
----
+## Présentation du projet
 
-## 🧩 C'est quoi, Frugal AI ?
+Frugal AI est une application locale mettant en scène un échange entre deux intelligences artificielles. La première joue le rôle d'une IA « frugaliste » et guide l'utilisateur à travers un questionnaire. La seconde, appelée IA standard, répond aux questions et argumente ses choix. À la fin de l'échange, l'application attribue un score et affiche un profil.
 
-Un système de **débat entre deux IA, 100 % local** (rien ne sort de ta machine) :
+L'intérêt du projet est aussi technique : l'IA frugaliste peut s'appuyer sur une base documentaire construite à partir de fichiers PDF. Ces documents sont lus, découpés en fragments, transformés en vecteurs, puis stockés dans Supabase. Ce mécanisme correspond au principe du RAG, pour *Retrieval-Augmented Generation*.
 
-- une **IA « frugaliste »** incarne un rôle (prêtre, coach, psychanalyste…) et pose un questionnaire ;
-- une **IA « standard »** (Mistral, Qwen…) répond en argumentant ;
-- le système **note** discrètement les réponses et révèle un **profil** à la fin ;
-- la frugaliste s'appuie sur une **base de connaissances** (RAG) construite à partir de PDF.
+L'ensemble fonctionne localement. Les modèles sont exécutés avec Ollama, les scénarios sont orchestrés avec n8n et la base de données est hébergée sur la machine de l'utilisateur via Docker.
 
-Pour que tout ça fonctionne, **4 briques** doivent tourner ensemble :
+## Architecture générale
 
+Le fonctionnement du projet peut se résumer de la manière suivante :
+
+```text
+Navigateur utilisateur
+        |
+        | accès au site local
+        v
+Interface web — localhost:8080
+        |
+        | appels webhook
+        v
+n8n — orchestration des workflows
+        |
+        | appels aux modèles et à la base
+        v
+Ollama — modèles IA locaux
+OCR — extraction du texte des PDF
+Supabase — stockage, sessions, messages, scores et vecteurs
 ```
-   Toi (navigateur)                          Ta machine (Docker)
- ┌──────────────────┐                 ┌─────────────────────────────────┐
- │  Site web (2     │  ──webhook──►   │  n8n      orchestre la frugaliste │
- │  fenêtres)       │                 │  Ollama   exécute les modèles IA  │
- │  localhost:8080  │  ──API────►     │  OCR      lit les PDF             │
- └──────────────────┘                 └────────────────┬────────────────┘
-                                                        │
-                                          Supabase (base de données +
-                                          recherche vectorielle pgvector)
-```
 
-Tu vas installer ces briques **dans l'ordre**, une étape à la fois.
+Supabase repose sur PostgreSQL et utilise l'extension pgvector pour effectuer des recherches par similarité dans les documents indexés. n8n sert de couche d'orchestration : il reçoit les demandes de l'interface, interroge les modèles, récupère les passages pertinents du corpus et renvoie les réponses au site.
 
----
+## Ordre d'installation
 
-## 🗺️ Le parcours (suis les fiches dans l'ordre)
+Les étapes doivent être suivies dans l'ordre, car chacune dépend de la précédente.
 
-| # | Étape | Fiche | Type | Durée ~ |
-|---|---|---|---|---|
-| 0 | Installer les outils de base | [00-prerequis.md](00-prerequis.md) | manuel | 30–60 min |
-| 1 | Lancer la base de données Supabase | [01-supabase.md](01-supabase.md) | commandes | 15 min |
-| 2 | Créer les tables | [02-base-de-donnees.md](02-base-de-donnees.md) | script | 2 min |
-| 3 | Démarrer le backend + télécharger les IA | [03-backend-et-modeles.md](03-backend-et-modeles.md) | script | 30–60 min |
-| 4 | Importer les workflows n8n | [04-workflows-n8n.md](04-workflows-n8n.md) | script | 10 min |
-| 5 | Ajouter les PDF et construire le RAG | [05-corpus-rag.md](05-corpus-rag.md) | manuel | variable |
-| 6 | Lancer et utiliser le projet | [06-lancer-et-utiliser.md](06-lancer-et-utiliser.md) | script | 2 min |
-| — | En cas de problème | [07-depannage.md](07-depannage.md) | référence | — |
-
-> ⏱️ **Compte large pour la première fois** : l'essentiel du temps, c'est le téléchargement de Docker, des images et des modèles IA (plusieurs Go). Une fois installé, le lancement quotidien prend quelques secondes.
-
----
-
-## ✅ Avant de commencer : checklist matériel
-
-- **RAM** : 12 Go minimum recommandés (les IA tournent sur le processeur).
-- **Disque** : prévois ~20 Go libres (images Docker + modèles + Supabase).
-- **Connexion** : les téléchargements initiaux sont lourds.
-
-Si tu es prêt, ouvre la première fiche : **[00-prerequis.md](00-prerequis.md)**.
-
----
-
-## 🛠️ Mémo des scripts (utilisés pendant le parcours)
-
-Tous dans `backend/scripts/` :
-
-| Script | Ce qu'il fait | Fiche |
+| Étape | Fichier | Objectif |
 |---|---|---|
-| `init_supabase.ps1` | Crée les tables + active pgvector | étape 2 |
-| `setup.ps1` | Build OCR, démarre le backend, télécharge les modèles | étape 3 |
-| `import_workflows.ps1` | Importe les workflows n8n et applique les réglages | étape 4 |
+| 0 | [00-prerequis.md](00-prerequis.md) | Installer les outils nécessaires : WSL2, Docker Desktop, Python et Git |
+| 1 | [01-supabase.md](01-supabase.md) | Télécharger et démarrer Supabase en local |
+| 2 | [02-base-de-donnees.md](02-base-de-donnees.md) | Créer les tables, activer pgvector et installer les fonctions SQL |
+| 3 | [03-backend-et-modeles.md](03-backend-et-modeles.md) | Démarrer n8n, Ollama, l'OCR et télécharger les modèles |
+| 4 | [04-workflows-n8n.md](04-workflows-n8n.md) | Importer et activer les workflows n8n |
+| 5 | [05-corpus-rag.md](05-corpus-rag.md) | Ajouter les PDF et construire la base documentaire |
+| 6 | [06-lancer-et-utiliser.md](06-lancer-et-utiliser.md) | Lancer l'application et utiliser l'interface |
+| 7 | [07-depannage.md](07-depannage.md) | Diagnostiquer les problèmes les plus fréquents |
 
-Et à la racine du projet :
+La première installation peut prendre du temps, principalement à cause du téléchargement des images Docker et des modèles d'IA. Une fois les services installés, le lancement quotidien est beaucoup plus rapide.
 
-| Script | Ce qu'il fait |
+## Configuration matérielle recommandée
+
+Le projet peut fonctionner sur une machine classique, mais l'exécution locale des modèles d'IA demande des ressources. Il est recommandé de prévoir au minimum 12 Go de RAM et environ 20 Go d'espace disque libre. Une connexion stable est également préférable lors de la première installation, car plusieurs fichiers volumineux sont téléchargés.
+
+Les modèles sont exécutés localement, généralement sur le processeur. Sur une machine peu puissante, les premières réponses peuvent donc être lentes, notamment au moment où Ollama charge un modèle en mémoire.
+
+## Scripts principaux
+
+Plusieurs scripts sont fournis pour automatiser l'installation et le lancement.
+
+Les scripts placés dans `backend/scripts/` sont utilisés pendant l'installation :
+
+| Script | Rôle |
 |---|---|
-| `lancer-frugal-ai.ps1` | Démarre tout et ouvre le site |
+| `init_supabase.ps1` | Initialise les tables Supabase, active pgvector et ajoute les fonctions SQL |
+| `setup.ps1` | Démarre les services backend et télécharge les modèles Ollama |
+| `import_workflows.ps1` | Importe les workflows n8n et applique les réglages du projet |
+
+Deux scripts placés à la racine servent à l'utilisation courante :
+
+| Script | Rôle |
+|---|---|
+| `lancer-frugal-ai.ps1` | Démarre les services et ouvre l'interface web |
 | `arreter-frugal-ai.ps1` | Arrête proprement le serveur web et les conteneurs |
+
+Après l'installation complète, il n'est normalement plus nécessaire de refaire les étapes 0 à 5. Il suffit d'utiliser les scripts de lancement et d'arrêt.
