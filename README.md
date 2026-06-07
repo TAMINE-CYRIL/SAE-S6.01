@@ -1,6 +1,6 @@
-# Frugal AI
+# Frugal Training
 
-**Frugal AI** est un système de **débat entre deux IA, 100 % local** (rien ne sort de la machine).
+**Frugal Training** est un projet de SAE S6.01, qui représente un système de **débat entre deux IA, 100 % local**.
 
 Une **IA frugaliste**, qui incarne un rôle au choix (prêtre, coach, psychanalyste, imam…) et défend une vision de sobriété / décroissance, anime un questionnaire à choix multiples. Une **IA standard** choisie par l'utilisateur (Mistral, Qwen, Llama, Gemma, Phi, DeepSeek) y répond en argumentant. Le système **note silencieusement** chaque réponse (1 = frugaliste → 4 = techno-optimiste), puis révèle un **profil** à la fin. La frugaliste s'appuie sur une **base documentaire (RAG)** construite à partir d'un corpus de PDF sur la frugalité et la décroissance.
 
@@ -26,13 +26,13 @@ Une **IA frugaliste**, qui incarne un rôle au choix (prêtre, coach, psychanaly
 | **`supabase-local/`** | Supabase auto-hébergé (PostgreSQL + pgvector). Dépôt tiers, **non versionné** ici. |
 | **`docs/`** | Cahier des charges et documents de référence. |
 
-## 🚀 Première installation
+## Première installation
 
-Tu pars de zéro (machine neuve, jamais utilisé Docker) ? Suis le **guide pas à pas**, qui explique tout — des prérequis jusqu'au premier débat :
+Suis le **guide pas à pas**, qui explique tout — des prérequis jusqu'au premier débat :
 
-👉 **[guide-installation/README.md](guide-installation/README.md)**
+**[guide-installation/README.md](guide-installation/README.md)**
 
-## Démarrage rapide (projet déjà installé)
+## Démarrage rapide
 
 ```powershell
 .\lancer-frugal-ai.ps1     # démarre tout + ouvre le site
